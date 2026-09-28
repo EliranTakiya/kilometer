@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#eef2ef" />
+    <meta name="description" content="לוח פשוט לעדכון ומעקב אחר קילומטראז׳." />
+    <title>מד ק״מ | מעקב צי</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="config.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="מד קילומטר, לעמוד הראשי">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none"><path d="M5 21.5 7.2 14a3 3 0 0 1 2.9-2.1h11.8a3 3 0 0 1 2.9 2.1l2.2 7.5v4H5v-4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 18h14M10 11.8l1.6-3h8.8l1.6 3M9 25.5v2M23 25.5v2M8.5 21.5h.1M23.4 21.5h.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </span>
+        <span class="brand-name">מד ק״מ<span class="brand-caption">מעקב צי</span></span>
+      </a>
+      <div class="topbar-note"><span class="live-dot"></span><span id="connection-status">מתחבר לענן</span></div>
+    </header>
+
+    <main id="top" class="page-shell">
+      <section class="intro" aria-labelledby="page-title">
+        <div class="intro-copy">
+          <p class="eyebrow">ניהול קילומטראז׳</p>
+          <h1 id="page-title">כל הרכבים.<br /><span>במבט אחד.</span></h1>
+          <p class="intro-description">עדכנו את מד הקילומטרים ושמרו את נתוני הצי במקום אחד.</p>
+        </div>
+        <div class="intro-art" aria-hidden="true">
+          <div class="art-ring ring-one"></div><div class="art-ring ring-two"></div>
+          <svg class="art-car" viewBox="0 0 250 116" fill="none"><path d="m27 72 11-27c2-6 8-10 15-10h97c8 0 14 3 19 9l25 28 25 7c5 2 8 7 8 12v10H18V88c0-7 4-13 9-16Z" fill="#d8e3dc" stroke="#174f40" stroke-width="4" stroke-linejoin="round"/><path d="m55 43-8 25h62V39H55ZM120 39v29h68l-24-25c-2-3-6-4-10-4h-34Z" fill="#a7c2b4" stroke="#174f40" stroke-width="3" stroke-linejoin="round"/><path d="M18 82h208M31 99h23M195 99h21" stroke="#174f40" stroke-width="4" stroke-linecap="round"/><circle cx="59" cy="98" r="13" fill="#fff" stroke="#174f40" stroke-width="4"/><circle cx="59" cy="98" r="4" fill="#174f40"/><circle cx="187" cy="98" r="13" fill="#fff" stroke="#174f40" stroke-width="4"/><circle cx="187" cy="98" r="4" fill="#174f40"/><path d="M36 76h-8M211 75l12 4" stroke="#f18865" stroke-width="5" stroke-linecap="round"/></svg>
+          <span class="art-mileage">KM <b>24</b></span>
+        </div>
+      </section>
+
+      <section class="overview" aria-label="סיכום צי">
+        <div class="overview-label"><span class="overview-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 18V6m0 12h16M8 15l3-4 3 2 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>תמונת מצב</span></div>
+        <div class="metric"><span class="metric-value" id="total-vehicles">24</span><span class="metric-label">רכבים בצי</span></div>
+        <div class="metric"><span class="metric-value" id="updated-count">0</span><span class="metric-label">עודכנו</span></div>
+        <div class="metric metric-wide"><span class="metric-value" id="total-km">—</span><span class="metric-label">סה״כ ק״מ מעודכנים</span></div>
+        <div class="overview-progress" aria-hidden="true"><span id="progress-fill"></span></div>
+        <p class="progress-copy" id="progress-copy">עדיין אין עדכונים</p>
+      </section>
+
+      <section class="fleet" aria-labelledby="fleet-title">
+        <div class="fleet-heading">
+          <div><p class="eyebrow">רשימת הצי</p><h2 id="fleet-title">עדכון קילומטרים</h2></div>
+          <button class="export-button" id="export-button" type="button" title="ייצוא הנתונים לקובץ CSV">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>ייצוא נתונים</span>
+          </button>
+        </div>
+        <div class="toolbar">
+          <label class="search-box" for="vehicle-search">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4.2 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <input id="vehicle-search" type="search" placeholder="חיפוש לפי מספר רכב" autocomplete="off" />
+            <kbd>/</kbd>
+          </label>
+          <p class="list-count" id="list-count">24 רכבים</p>
+        </div>
+        <div class="column-labels" aria-hidden="true"><span>מספר רכב</span><span>קילומטראז׳ נוכחי</span><span>סטטוס</span></div>
+        <div class="vehicle-list" id="vehicle-list" aria-live="polite"></div>
+        <p class="empty-state" id="empty-state" hidden>לא נמצאו רכבים התואמים לחיפוש.</p>
+        <p class="save-note" id="connection-note"><span class="save-check" aria-hidden="true">✓</span>מתחבר לאחסון המשותף...</p>
+      </section>
+    </main>
+
+    <footer class="footer"><span>מד ק״מ <span class="footer-separator">/</span> מעקב פשוט, נסיעה בטוחה</span><span id="footer-date"></span></footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
