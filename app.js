@@ -300,9 +300,14 @@ async function initializeCloud() {
 
 function updateSummary() {
   const updated = vehicles.filter(({ km }) => km !== "");
-  const total = updated.reduce((sum, { km }) => sum + km, 0);
+  const weekInMilliseconds = 7 * 24 * 60 * 60 * 1000;
+  const pending = vehicles.filter(({ kmUpdatedAt }) => {
+    if (!kmUpdatedAt) return true;
+    const updatedAt = new Date(kmUpdatedAt).getTime();
+    return !Number.isFinite(updatedAt) || Date.now() - updatedAt > weekInMilliseconds;
+  });
   document.querySelector("#updated-count").textContent = updated.length;
-  document.querySelector("#total-km").textContent = updated.length ? formatNumber(total) : "—";
+  document.querySelector("#pending-count").textContent = pending.length;
   document.querySelector("#progress-fill").style.width = `${(updated.length / VEHICLE_COUNT) * 100}%`;
   document.querySelector("#progress-copy").textContent = updated.length ? `${updated.length} מתוך ${VEHICLE_COUNT}` : "עדיין אין עדכונים";
 }
