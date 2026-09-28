@@ -42,6 +42,12 @@ function formatNumber(value) {
   return new Intl.NumberFormat("he-IL").format(value);
 }
 
+function formatMileageInput(value) {
+  if (value === "") return "";
+  const digits = String(value).replace(/\D/g, "");
+  return digits ? formatNumber(Number(digits)) : "";
+}
+
 function formatDateTime(value) {
   if (!value) return "—";
   const date = new Date(value);
@@ -80,16 +86,26 @@ function renderVehicles() {
     const field = document.createElement("label");
     field.className = "km-field";
     const input = document.createElement("input");
-    input.type = "number";
-    input.min = "0";
-    input.step = "1";
+    input.type = "text";
     input.inputMode = "numeric";
     input.dataset.vehicleId = id;
     input.disabled = !cloudReady;
     input.placeholder = "הקלידו קילומטראז׳";
     input.setAttribute("aria-label", `קילומטראז׳ נוכחי, רכב ${id}`);
-    input.value = km === "" ? "" : km;
-    input.addEventListener("input", () => updateMileage(id, input.value));
+    input.value = formatMileageInput(km);
+    input.addEventListener("input", () => {
+      const digitCountBeforeCaret = input.value.slice(0, input.selectionStart ?? input.value.length).replace(/\D/g, "").length;
+      const digits = input.value.replace(/\D/g, "");
+      input.value = formatMileageInput(digits);
+      let caret = 0;
+      let countedDigits = 0;
+      while (caret < input.value.length && countedDigits < digitCountBeforeCaret) {
+        if (/\d/.test(input.value[caret])) countedDigits += 1;
+        caret += 1;
+      }
+      input.setSelectionRange(caret, caret);
+      updateMileage(id, digits);
+    });
     const unit = document.createElement("span");
     unit.textContent = "ק״מ";
     field.append(input, unit);
@@ -113,7 +129,8 @@ function renderVehicles() {
 }
 
 function updateMileage(id, rawValue) {
-  const parsed = rawValue === "" ? "" : Number(rawValue);
+  const digits = rawValue.replace(/\D/g, "");
+  const parsed = digits === "" ? "" : Number(digits);
   if (!cloudReady || (parsed !== "" && (!Number.isFinite(parsed) || parsed < 0))) return;
 
   vehicles = vehicles.map((vehicle) => vehicle.id === id ? { ...vehicle, km: parsed } : vehicle);
@@ -194,7 +211,7 @@ function applyCloudVehicles(rows) {
     const mileageInput = vehicleList.querySelector(`.km-field input[data-vehicle-id="${id}"]`);
     if (!plateInput || !mileageInput) return;
     plateInput.value = plateNumber;
-    mileageInput.value = km;
+    mileageInput.value = formatMileageInput(km);
     const row = mileageInput.closest(".vehicle-row");
     row.classList.toggle("is-updated", km !== "");
     row.querySelector(".updated-time").textContent = formatDateTime(kmUpdatedAt);
