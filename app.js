@@ -16,7 +16,7 @@ const pendingSaveTimers = new Map();
 const saveQueues = new Map();
 
 function createEmptyVehicles() {
-  return Array.from({ length: VEHICLE_COUNT }, (_, index) => ({ id: index + 1, km: "" }));
+  return Array.from({ length: VEHICLE_COUNT }, (_, index) => ({ id: index + 1, plateNumber: "", km: "", kmUpdatedAt: null }));
 }
 
 function loadLocalVehicles() {
@@ -25,7 +25,13 @@ function loadLocalVehicles() {
     return Array.from({ length: VEHICLE_COUNT }, (_, index) => {
       const id = index + 1;
       const value = saved[id];
-      return { id, km: Number.isFinite(value) && value >= 0 ? value : "" };
+      const km = typeof value === "object" && value !== null ? value.km : value;
+      return {
+        id,
+        plateNumber: typeof value?.plateNumber === "string" ? value.plateNumber : "",
+        km: Number.isFinite(km) && km >= 0 ? km : "",
+        kmUpdatedAt: null
+      };
     });
   } catch {
     return Array.from({ length: VEHICLE_COUNT }, (_, index) => ({ id: index + 1, km: "" }));
@@ -36,12 +42,19 @@ function formatNumber(value) {
   return new Intl.NumberFormat("he-IL").format(value);
 }
 
+function formatDateTime(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short" }).format(date);
+}
+
 function renderVehicles() {
   const query = searchInput.value.trim();
-  const filtered = vehicles.filter(({ id }) => String(id).includes(query));
+  const filtered = vehicles.filter(({ id, plateNumber }) => String(id).includes(query) || plateNumber.includes(query));
   vehicleList.replaceChildren();
 
-  filtered.forEach(({ id, km }, index) => {
+  filtered.forEach(({ id, plateNumber, km, kmUpdatedAt }, index) => {
     const row = document.createElement("div");
     row.className = `vehicle-row${km !== "" ? " is-updated" : ""}`;
     row.style.animationDelay = `${Math.min(index, 8) * 18}ms`;
@@ -51,9 +64,18 @@ function renderVehicles() {
     const number = document.createElement("span");
     number.className = "vehicle-number";
     number.textContent = String(id).padStart(2, "0");
-    const name = document.createElement("span");
-    name.textContent = `רכב ${id}`;
-    identity.append(number, name);
+    const plateInput = document.createElement("input");
+    plateInput.className = "plate-input";
+    plateInput.type = "text";
+    plateInput.maxLength = 20;
+    plateInput.autocomplete = "off";
+    plateInput.placeholder = "הזינו מספר רכב";
+    plateInput.value = plateNumber;
+    plateInput.dataset.vehicleId = id;
+    plateInput.disabled = !cloudReady;
+    plateInput.setAttribute("aria-label", `מספר רכב ${id}`);
+    plateInput.addEventListener("input", () => updatePlateNumber(id, plateInput.value));
+    identity.append(number, plateInput);
 
     const field = document.createElement("label");
     field.className = "km-field";
@@ -75,7 +97,14 @@ function renderVehicles() {
     const status = document.createElement("span");
     status.className = "row-status";
     status.textContent = !cloudReady ? "לא מחובר" : km === "" ? "ממתין לעדכון" : "עודכן";
-    row.append(identity, field, status);
+    const updatedCell = document.createElement("div");
+    updatedCell.className = "updated-cell";
+    const updatedTime = document.createElement("time");
+    updatedTime.className = "updated-time";
+    updatedTime.textContent = formatDateTime(kmUpdatedAt);
+    if (kmUpdatedAt) updatedTime.dateTime = kmUpdatedAt;
+    updatedCell.append(updatedTime, status);
+    row.append(identity, field, updatedCell);
     vehicleList.append(row);
   });
 
@@ -90,11 +119,19 @@ function updateMileage(id, rawValue) {
   vehicles = vehicles.map((vehicle) => vehicle.id === id ? { ...vehicle, km: parsed } : vehicle);
   updateSummary();
 
-  const row = [...vehicleList.children].find((element) => element.querySelector(".vehicle-number")?.textContent === String(id).padStart(2, "0"));
+  const row = vehicleList.querySelector(`[data-vehicle-id="${id}"]`)?.closest(".vehicle-row");
   if (row) {
     row.querySelector(".row-status").textContent = "שומר...";
   }
   scheduleMileageSave(id);
+}
+
+function updatePlateNumber(id, value) {
+  if (!cloudReady) return;
+  vehicles = vehicles.map((vehicle) => vehicle.id === id ? { ...vehicle, plateNumber: value.trimStart() } : vehicle);
+  scheduleMileageSave(id);
+  const row = vehicleList.querySelector(`[data-vehicle-id="${id}"]`)?.closest(".vehicle-row");
+  if (row) row.querySelector(".row-status").textContent = "שומר...";
 }
 
 function isCloudConfigured() {
@@ -117,7 +154,7 @@ function supabaseHeaders(prefer) {
 }
 
 async function fetchCloudVehicles() {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/vehicle_mileage?select=id,km`, {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/vehicle_mileage?select=id,plate_number,km,km_updated_at`, {
     headers: supabaseHeaders()
   });
   if (!response.ok) throw new Error(`Could not load mileage (${response.status})`);
@@ -127,10 +164,11 @@ async function fetchCloudVehicles() {
 async function saveCloudVehicles(records) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/vehicle_mileage?on_conflict=id`, {
     method: "POST",
-    headers: supabaseHeaders("resolution=merge-duplicates,return=minimal"),
-    body: JSON.stringify(records.map(({ id, km }) => ({ id, km: km === "" ? null : km })))
+    headers: supabaseHeaders("resolution=merge-duplicates,return=representation"),
+    body: JSON.stringify(records.map(({ id, plateNumber, km }) => ({ id, plate_number: plateNumber, km: km === "" ? null : km })))
   });
   if (!response.ok) throw new Error(`Could not save mileage (${response.status})`);
+  return response.json();
 }
 
 function normalizeCloudMileage(value) {
@@ -140,19 +178,28 @@ function normalizeCloudMileage(value) {
 }
 
 function applyCloudVehicles(rows) {
-  const cloudValues = new Map(rows.map(({ id, km }) => [Number(id), normalizeCloudMileage(km)]));
+  const cloudValues = new Map(rows.map(({ id, plate_number, km, km_updated_at }) => [Number(id), {
+    plateNumber: typeof plate_number === "string" ? plate_number : "",
+    km: normalizeCloudMileage(km),
+    kmUpdatedAt: km_updated_at || null
+  }]));
   const focusedId = Number(document.activeElement?.dataset?.vehicleId);
   vehicles = vehicles.map((vehicle) => {
     if (pendingSaveTimers.has(vehicle.id) || saveQueues.has(vehicle.id) || vehicle.id === focusedId) return vehicle;
-    return { ...vehicle, km: cloudValues.get(vehicle.id) ?? "" };
+    return { ...vehicle, ...(cloudValues.get(vehicle.id) || { plateNumber: "", km: "", kmUpdatedAt: null }) };
   });
 
-  vehicles.forEach(({ id, km }) => {
-    const input = vehicleList.querySelector(`[data-vehicle-id="${id}"]`);
-    if (!input) return;
-    input.value = km;
-    const row = input.closest(".vehicle-row");
+  vehicles.forEach(({ id, plateNumber, km, kmUpdatedAt }) => {
+    const plateInput = vehicleList.querySelector(`.plate-input[data-vehicle-id="${id}"]`);
+    const mileageInput = vehicleList.querySelector(`.km-field input[data-vehicle-id="${id}"]`);
+    if (!plateInput || !mileageInput) return;
+    plateInput.value = plateNumber;
+    mileageInput.value = km;
+    const row = mileageInput.closest(".vehicle-row");
     row.classList.toggle("is-updated", km !== "");
+    row.querySelector(".updated-time").textContent = formatDateTime(kmUpdatedAt);
+    if (kmUpdatedAt) row.querySelector(".updated-time").dateTime = kmUpdatedAt;
+    else row.querySelector(".updated-time").removeAttribute("datetime");
     row.querySelector(".row-status").textContent = km === "" ? "ממתין לעדכון" : "עודכן";
   });
   updateSummary();
@@ -162,18 +209,28 @@ function scheduleMileageSave(id) {
   clearTimeout(pendingSaveTimers.get(id));
   const timer = setTimeout(() => {
     pendingSaveTimers.delete(id);
-    const record = vehicles.find((vehicle) => vehicle.id === id);
+    const record = { ...vehicles.find((vehicle) => vehicle.id === id) };
     const previousSave = saveQueues.get(id) || Promise.resolve();
     const currentSave = previousSave.catch(() => {}).then(() => saveCloudVehicles([record]));
     saveQueues.set(id, currentSave);
 
-    currentSave.then(() => {
+    currentSave.then((savedRows) => {
       if (saveQueues.get(id) !== currentSave) return;
       saveQueues.delete(id);
+      const saved = savedRows.find((item) => Number(item.id) === id);
+      if (saved) {
+        vehicles = vehicles.map((vehicle) => vehicle.id === id && vehicle.km === record.km && vehicle.plateNumber === record.plateNumber
+          ? { ...vehicle, kmUpdatedAt: saved.km_updated_at || null }
+          : vehicle);
+      }
       const row = vehicleList.querySelector(`[data-vehicle-id="${id}"]`)?.closest(".vehicle-row");
       if (row) {
+        const current = vehicles.find((vehicle) => vehicle.id === id);
         row.classList.toggle("is-updated", record.km !== "");
-        row.querySelector(".row-status").textContent = record.km === "" ? "ממתין לעדכון" : "עודכן";
+        row.querySelector(".updated-time").textContent = formatDateTime(current.kmUpdatedAt);
+        if (current.kmUpdatedAt) row.querySelector(".updated-time").dateTime = current.kmUpdatedAt;
+        else row.querySelector(".updated-time").removeAttribute("datetime");
+        row.querySelector(".row-status").textContent = current.km === "" ? "ממתין לעדכון" : "עודכן";
       }
       setConnectionState("מסונכרן", "הנתונים מסתנכרנים בין המכשירים", true);
     }).catch(() => {
@@ -209,8 +266,7 @@ async function initializeCloud() {
     let rows = await fetchCloudVehicles();
     if (rows.length === 0) {
       vehicles = loadLocalVehicles();
-      await saveCloudVehicles(vehicles);
-      rows = vehicles.map(({ id, km }) => ({ id, km: km === "" ? null : km }));
+      rows = await saveCloudVehicles(vehicles);
     }
     cloudReady = true;
     applyCloudVehicles(rows);
@@ -242,7 +298,7 @@ function showToast(message) {
 }
 
 function exportCsv() {
-  const rows = [["מספר רכב", "קילומטראז׳"], ...vehicles.map(({ id, km }) => [id, km === "" ? "" : km])];
+  const rows = [["מספר פנימי", "מספר רכב", "קילומטראז׳", "עדכון אחרון"], ...vehicles.map(({ id, plateNumber, km, kmUpdatedAt }) => [id, plateNumber, km === "" ? "" : km, formatDateTime(kmUpdatedAt)])];
   const csv = `\uFEFF${rows.map((row) => row.join(",")).join("\r\n")}`;
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");

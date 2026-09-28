@@ -85,13 +85,17 @@ h2 { margin: 0; font-size: 25px; line-height: 1.3; font-weight: 700; }
 .search-box input::placeholder { color: #99a39d; }
 .search-box kbd { min-width: 20px; padding: 1px 5px; border: 1px solid #e0e5e1; border-radius: 3px; color: #99a39d; font: 11px "DM Sans", sans-serif; text-align: center; }
 .list-count { margin: 0; color: var(--muted); font-size: 12px; }
-.column-labels { min-height: 35px; padding: 0 18px; display: grid; grid-template-columns: 1fr 1.35fr .6fr; align-items: center; color: #78867e; font-size: 11px; font-weight: 500; }
+.column-labels { min-height: 35px; padding: 0 18px; display: grid; grid-template-columns: 1fr 1.15fr .9fr; align-items: center; color: #78867e; font-size: 11px; font-weight: 500; }
 .column-labels span:nth-child(2) { padding-inline-start: 4px; }
 .vehicle-list { display: grid; gap: 7px; }
-.vehicle-row { min-height: 67px; padding: 10px 18px; display: grid; grid-template-columns: 1fr 1.35fr .6fr; align-items: center; border: 1px solid #e1e8e3; border-radius: 5px; background: var(--paper); box-shadow: 0 2px 5px #153e2b05; transition: border-color .15s, transform .15s, box-shadow .15s; animation: row-arrive .28s ease both; }
+.vehicle-row { min-height: 70px; padding: 10px 18px; display: grid; grid-template-columns: 1fr 1.15fr .9fr; align-items: center; gap: 12px; border: 1px solid #e1e8e3; border-radius: 5px; background: var(--paper); box-shadow: 0 2px 5px #153e2b05; transition: border-color .15s, transform .15s, box-shadow .15s; animation: row-arrive .28s ease both; }
 .vehicle-row:hover { transform: translateY(-1px); border-color: #c7d6cb; box-shadow: 0 4px 12px #153e2b0b; }
 .vehicle-id { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; }
 .vehicle-number { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #e0e9e2; border-radius: 5px; background: #f5f8f5; color: var(--green); font: 600 13px "DM Sans", sans-serif; font-variant-numeric: tabular-nums; }
+.plate-input { width: 100%; min-width: 0; height: 39px; padding: 0 10px; border: 1px solid #e0e7e2; border-radius: 4px; outline: 0; background: #fbfcfb; color: var(--ink); font: 500 13px var(--font); transition: border-color .15s, background .15s, box-shadow .15s; }
+.plate-input::placeholder { color: #98a39b; }
+.plate-input:focus { border-color: #739781; background: #fff; box-shadow: 0 0 0 3px #174f4010; }
+.plate-input:disabled { color: #89948d; }
 .km-field { width: min(100%, 260px); height: 39px; position: relative; }
 .km-field input { width: 100%; height: 100%; padding: 0 12px 0 48px; border: 1px solid #e0e7e2; border-radius: 4px; outline: 0; background: #fbfcfb; color: var(--ink); font: 600 14px "DM Sans", var(--font); font-variant-numeric: tabular-nums; transition: border-color .15s, background .15s, box-shadow .15s; }
 .km-field input:focus { border-color: #739781; background: #fff; box-shadow: 0 0 0 3px #174f4010; }
@@ -101,6 +105,8 @@ h2 { margin: 0; font-size: 25px; line-height: 1.3; font-weight: 700; }
 .row-status::before { width: 6px; height: 6px; border-radius: 50%; background: #cdd5cf; content: ""; }
 .vehicle-row.is-updated .row-status { color: #438060; }
 .vehicle-row.is-updated .row-status::before { background: #61a77b; }
+.updated-cell { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.updated-time { color: #58665d; font: 500 12px "DM Sans", var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .empty-state { padding: 30px 0; color: var(--muted); text-align: center; font-size: 14px; }
 .save-note { margin: 17px 0 0; display: flex; align-items: center; gap: 7px; color: #718078; font-size: 11px; }
 .save-check { width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; background: #deede2; color: #438060; font: 700 10px "DM Sans", sans-serif; }
@@ -129,12 +135,17 @@ h2 { margin: 0; font-size: 25px; line-height: 1.3; font-weight: 700; }
   .overview-progress { grid-column: 1 / 3; }
   .progress-copy { grid-column: 3; margin: -7px 0 0; font-size: 10px; }
   .fleet { padding-top: 34px; }
-  .column-labels { grid-template-columns: .8fr 1.25fr; padding: 0 12px; }
+  .column-labels { grid-template-columns: 1.15fr .85fr; padding: 0 12px; }
+  .column-labels span:nth-child(2) { text-align: center; }
   .column-labels span:last-child { display: none; }
-  .vehicle-row { min-height: 66px; padding: 9px 12px; grid-template-columns: .8fr 1.25fr; gap: 8px; }
+  .vehicle-row { min-height: 100px; padding: 10px 12px; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "identity updated" "mileage mileage"; gap: 8px 10px; }
+  .vehicle-id { grid-area: identity; min-width: 0; }
+  .vehicle-row > .km-field { grid-area: mileage; max-width: none; }
+  .updated-cell { grid-area: updated; align-items: flex-end; gap: 2px; }
+  .updated-time { font-size: 11px; }
+  .updated-cell .row-status { font-size: 10px; }
   .vehicle-id { gap: 8px; font-size: 13px; }
   .vehicle-number { width: 31px; height: 31px; }
-  .row-status { display: none; }
   .km-field { width: 100%; }
   .km-field input { height: 38px; }
   .footer { padding: 0 17px; }
@@ -151,8 +162,11 @@ h2 { margin: 0; font-size: 25px; line-height: 1.3; font-weight: 700; }
   .search-box { height: 40px; }
   .list-count { font-size: 11px; }
   .column-labels { font-size: 10px; }
-  .vehicle-row { grid-template-columns: .75fr 1.25fr; }
+  .vehicle-row { grid-template-columns: minmax(0, 1fr) auto; }
   .vehicle-id { font-size: 12px; }
+  .vehicle-number { width: 30px; height: 30px; flex: 0 0 30px; }
+  .plate-input { height: 36px; padding-inline: 8px; font-size: 12px; }
+  .updated-time { font-size: 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
